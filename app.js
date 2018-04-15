@@ -8,7 +8,7 @@ var mysql= require('mysql');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
-var doctorController = require('./controllers/doctor.controller')
+var controller = require('./controllers/controller')
 
 var app = express();
 
@@ -46,7 +46,13 @@ app.use(function(req, res, next){
 app.use('/', indexRouter);
 // app.use('/users', usersRouter);
 
-app.get('/doctors', doctorController.getDoctors)
+app.get('/doctors', controller.getDoctors)
+app.get('/patients', controller.getPatients)
+app.get('/medicines', controller.getMedicines)
+app.get('/medicines/valid', controller.getValidMedicines)
+app.get('/prescriptions', controller.getPrescriptions)
+app.get('/prescriptions/:prescriptionId', controller.getPrescriptionById)
+app.post('/create/prescription', controller.createPrescription)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
