@@ -50,8 +50,10 @@ exports.getValidMedicines = function (req, res) {
 }
 
 exports.createPrescription = function (req, res) {
+    var data = JSON.parse(JSON.stringify(req.body).slice(2, -5).replace(/\\/g,''))
+    console.log(data)
     // Create prescription
-    var command = "INSERT INTO prescription (PRE_DATE, PRE_NOTE, PRE_STATUS, PAT_ID, DOC_ID) VALUES (CURRENT_TIMESTAMP, '" + req.body.note + "', 'PENDING', " + req.body.patientId + ", " +  req.body.doctorId + ")"
+    var command = "INSERT INTO prescription (PRE_DATE, PRE_NOTE, PRE_STATUS, PAT_ID, DOC_ID) VALUES (CURRENT_TIMESTAMP, '" + data.note + "', 'PENDING', " + data.patientId + ", " +  data.doctorId + ")"
     connection.query(command, function (error, results, fields) {
         if(error){
             res.send(JSON.stringify({"status": 500, "error": error, "data": null}));
@@ -60,7 +62,7 @@ exports.createPrescription = function (req, res) {
             // res.send(JSON.stringify({"status": 200, "error": null, "data": results}));
             //If there is no error, all is good and response is 200OK.
 
-            var command = "SELECT PRE_ID from prescription WHERE PAT_ID='" + req.body.patientId + "' AND DOC_ID='" + req.body.doctorId + "'"
+            var command = "SELECT PRE_ID from prescription WHERE PAT_ID='" + data.patientId + "' AND DOC_ID='" + data.doctorId + "'"
             connection.query(command, function (error, results, fields) {
                 if(error){
                     res.send(JSON.stringify({"status": 500, "error": error, "data": null}));
@@ -70,10 +72,10 @@ exports.createPrescription = function (req, res) {
                     //If there is no error, all is good and response is 200OK.
                     prescriptionId = results[results.length-1]
 
-                    for (i in req.body.items) {
+                    for (i in data.items) {
 
                         // Add item
-                        var command = "INSERT INTO item (STOCK_ID, PRE_ID, ITEM_QTY) VALUES ('" + req.body.items[i].stockId + "', '" + prescriptionId.PRE_ID + "', '" + req.body.items[i].itemQty + "')"
+                        var command = "INSERT INTO item (STOCK_ID, PRE_ID, ITEM_QTY) VALUES ('" + data.items[i].stockId + "', '" + prescriptionId.PRE_ID + "', '" + data.items[i].amount + "')"
                         connection.query(command, function (error, results, fields) {
                             if(error){
                                 res.send(JSON.stringify({"status": 500, "error": error, "data": null}));
@@ -85,7 +87,7 @@ exports.createPrescription = function (req, res) {
                         });
 
                         // Decrease stock
-                        var command = "UPDATE stock SET STOCK_TOTAL=STOCK_TOTAL-" + req.body.items[i].itemQty + " WHERE STOCK_ID=" + req.body.items[i].stockId
+                        var command = "UPDATE stock SET STOCK_TOTAL=STOCK_TOTAL-" + data.items[i].amount + " WHERE STOCK_ID=" + data.items[i].stockId
                         connection.query(command, function (error, results, fields) {
                             if(error){
                                 res.send(JSON.stringify({"status": 500, "error": error, "data": null}));
@@ -145,8 +147,7 @@ exports.getPrescriptionById = function (req, res) {
         "\tINNER JOIN item i ON p.PRE_ID = i.PRE_ID\n" +
         "    INNER JOIN stock s ON s.STOCK_ID = i.STOCK_ID\n" +
         "    INNER JOIN medicine m ON s.MED_ID = m.MED_ID\n" +
-        "    LEFT JOIN pharmarcist c ON p.PHAR_ID = c.PHAR_ID\n" +
-        "WHERE p.PRE_ID = " + req.params.prescriptionId
+        "WHERE p.PRE_ID = '" + req.params.prescriptionId + "'"
     connection.query(command, function (error, results, fields) {
         if(error){
             res.send(JSON.stringify({"status": 500, "error": error, "data": null}));
@@ -154,6 +155,53 @@ exports.getPrescriptionById = function (req, res) {
         } else {
             res.send(JSON.stringify({"status": 200, "error": null, "data": results}));
             //If there is no error, all is good and response is 200OK.
+        }
+    });
+}
+
+exports.acceptPrescription = function (req, res) {
+    var data = JSON.parse(JSON.stringify(req.body).slice(2, -5).replace(/\\/g,''))
+    var command = "UPDATE prescription p\n" +
+        "SET p.PHAR_ID = '" + data.pharmarcistId + "',\n" +
+        "    p.PRE_NOTE = '" + data.note + "',\n" +
+        "    p.PRE_STATUS = 'ACCEPTED'\n" +
+        "WHERE p.PRE_ID = '" + data.prescriptionId + "'"
+    connection.query(command, function (error, results, fields) {
+        if(error){
+            res.send(JSON.stringify({"status": 500, "error": error, "data": null}));
+            //If there is error, we send the error in the error section with 500 status
+        } else {
+            console.log(results)
+            res.send(JSON.stringify({"status": 200, "error": null, "data": results}));
+            //If there is no error, all is good and response is 200OK.
+        }
+    });
+}
+
+exports.rejectPrescription = function (req, res) {
+    var data = JSON.parse(JSON.stringify(req.body).slice(2, -5).replace(/\\/g,''))
+    var command = "UPDATE prescription p\n" +
+        "SET p.PHAR_ID = '" + data.pharmarcistId + "',\n" +
+        "    p.PRE_NOTE = '" + data.note + ",\n" +
+        "    p.PRE_STATUS = 'REJECT'\n" +
+        "WHERE p.PRE_ID = '" + data.prescriptionId + "'"
+    connection.query(command, function (error, results, fields) {
+        if(error){
+            res.send(JSON.stringify({"status": 500, "error": error, "data": null}));
+            //If there is error, we send the error in the error section with 500 status
+        } else {
+            // TODO return medicine to stock
+            res.send(JSON.stringify({"status": 200, "error": null, "data": results}));
+            // var command = ""
+            // connection.query(command, function (error, results, fields) {
+            //     if(error){
+            //         res.send(JSON.stringify({"status": 500, "error": error, "data": null}));
+            //         //If there is error, we send the error in the error section with 500 status
+            //     } else {
+            //         res.send(JSON.stringify({"status": 200, "error": null, "data": results}));
+            //         //If there is no error, all is good and response is 200OK.
+            //     }
+            // });
         }
     });
 }

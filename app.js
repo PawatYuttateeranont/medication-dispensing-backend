@@ -53,6 +53,8 @@ app.get('/medicines/valid', controller.getValidMedicines)
 app.get('/prescriptions', controller.getPrescriptions)
 app.get('/prescriptions/:prescriptionId', controller.getPrescriptionById)
 app.post('/create/prescription', controller.createPrescription)
+app.post('/accept/prescription', controller.acceptPrescription)
+app.post('/reject/prescription', controller.rejectPrescription)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
